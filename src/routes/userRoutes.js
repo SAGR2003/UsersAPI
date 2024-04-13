@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { authenticateUser } = require('../middleware/authJwt');
 
 router.post('/register', async (req, res) => {
   try {
@@ -13,6 +15,11 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+router.post('/login', authenticateUser, (req, res) => {
+  const token = jwt.sign({ userId: req.user._id }, 'secret', { expiresIn: '1h' });
+  res.json({ token });
 });
 
 module.exports = router;
