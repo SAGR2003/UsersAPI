@@ -13,22 +13,37 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ username, email, password: hashedPassword });
     await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
+
+    jwt.sign({ username: newUser.username }, 'secret', { expiresIn: '1h' }, (err, token) => {
+      if (err) {
+        res.status(500).json({ error: 'Error al generar el token JWT' });
+      } else {
+        res.status(200).json({ message: 'User registered successfully', token }); 
+      }
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
 
 router.post('/login', (req, res) => {
   loginAttempts++;
 
   if (loginAttempts % 2 === 0) {
     authenticateUser(req, res, async () => {
-      try {
-        const token = jwt.sign({ userId: req.user._id }, 'secret', { expiresIn: '1h' });
-        res.json({ token });
-      } catch (error) {
-        res.status(500).json({ error: 'Internal server error' });
+      if (req.user && req.user.username) {
+        const username = req.user.username;
+
+        jwt.sign({ username: username }, 'secret', { expiresIn: '1h' }, (err, token) => {
+          if (err) {
+            res.status(500).json({ error: 'Error al generar el token JWT' });
+          } else {
+            res.json({ token }); 
+          }
+        });
+      } else {
+        res.status(403).json({ error: 'Usuario no autenticado o nombre de usuario no disponible' });
       }
     });
   } else {
